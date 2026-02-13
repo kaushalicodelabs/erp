@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/auth.config'
 import connectDB from '@/lib/db/mongodb'
-import { Employee } from '@/lib/db/models/Employee'
-import { Project } from '@/lib/db/models/Project'
-import { Invoice } from '@/lib/db/models/Invoice'
-import { Expense } from '@/lib/db/models/Expense'
-import { Client } from '@/lib/db/models/Client'
+import { Employee, Project, Invoice, Expense, Client } from '@/lib/db/models'
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 
 export async function GET() {

@@ -6,24 +6,34 @@ import { User } from '@/lib/db/models/User'
 import { Employee } from '@/lib/db/models/Employee'
 import { Client } from '@/lib/db/models/Client'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth()
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '0')
+    const limit = parseInt(searchParams.get('limit') || '6')
+    const skip = page * limit
+    const search = searchParams.get('search') || ''
+    const clientIdFilter = searchParams.get('clientId')
+
     await connectDB()
 
     let query: any = {}
 
     // Visibility Logic:
-    // Super Admin and HR can see all projects.
-    // Others only see projects they are assigned to (as PM or Employee).
-    if (!['super_admin', 'hr'].includes(session.user.role)) {
+    // HR is explicitly blocked from projects.
+    if (session.user.role === 'hr') {
+      return NextResponse.json({ error: 'Unauthorized: HR cannot view projects' }, { status: 403 })
+    }
+
+    if (session.user.role !== 'super_admin') {
       const employee = await Employee.findOne({ userId: session.user.id })
       if (!employee) {
-        return NextResponse.json({ projects: [] }) // No employee profile, no projects
+        return NextResponse.json({ projects: [], total: 0, pageCount: 0 })
       }
       query = {
         $or: [
@@ -33,25 +43,38 @@ export async function GET() {
       }
     }
 
-    // Find all users who are NOT super_admin for PM population mapping
-    const nonAdminUsers = await User.find({ role: { $ne: 'super_admin' } }, '_id')
-    const nonAdminUserIds = nonAdminUsers.map((u: any) => u._id)
-    
-    // Find employees linked to non-admin users
-    const nonAdminEmployees = await Employee.find({ userId: { $in: nonAdminUserIds } }, '_id')
-    const nonAdminEmployeeIds = nonAdminEmployees.map((e: any) => e._id)
+    if (search) {
+      query.$or = query.$or || []
+      query.$or.push(
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      )
+    }
 
-    const projects = await Project.find(query)
+    if (clientIdFilter) {
+      query.clientId = clientIdFilter
+    }
+
+    const total = await Project.countDocuments(query)
+    let queryBuilder = Project.find(query)
+
+    if (session.user.role !== 'super_admin') {
+      queryBuilder = queryBuilder.select('-budget')
+    }
+
+    const projects = await queryBuilder
       .populate('clientId', 'companyName')
-      .populate({
-        path: 'projectManager',
-        match: { _id: { $in: nonAdminEmployeeIds } },
-        select: 'firstName lastName'
-      })
-      .populate('assignedEmployees', 'firstName lastName')
+      .populate('projectManager', 'firstName lastName position')
+      .populate('assignedEmployees', 'firstName lastName position')
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
     
-    return NextResponse.json(projects)
+    return NextResponse.json({
+      projects,
+      total,
+      pageCount: Math.ceil(total / limit)
+    })
   } catch (error) {
     console.error('Error fetching projects:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -70,7 +93,12 @@ export async function POST(req: Request) {
 
     const project = await Project.create(body)
 
-    return NextResponse.json(project, { status: 201 })
+    let responseData = project.toObject()
+    if (session.user.role !== 'super_admin') {
+      delete responseData.budget
+    }
+
+    return NextResponse.json(responseData, { status: 201 })
   } catch (error) {
     console.error('Error creating project:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

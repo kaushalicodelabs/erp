@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useProjectReports } from '@/lib/hooks/use-project-reports'
+import { useProjectReports, useProjectStatusReports } from '@/lib/hooks/use-project-reports'
 import { 
   FolderKanban, 
   TrendingUp, 
@@ -41,7 +41,9 @@ import {
 const COLORS = ['#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#6366f1']
 
 export default function ProjectReportsPage() {
-  const { reportData, isLoading } = useProjectReports()
+  const { reportData, isLoading: analyticsLoading } = useProjectReports()
+  const { reports: recentStatusReports, isLoading: reportsLoading } = useProjectStatusReports()
+  const isLoading = analyticsLoading || reportsLoading
 
   const summaryStats = [
     {
@@ -212,99 +214,137 @@ export default function ProjectReportsPage() {
       </div>
 
       {/* Project Health Table */}
-      <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-        <CardHeader className="p-8 border-b border-gray-50 flex flex-row items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-              <LayoutGrid className="w-5 h-5 text-violet-600" />
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <Card className="xl:col-span-2 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+          <CardHeader className="p-8 border-b border-gray-50 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                <LayoutGrid className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Project Performance</CardTitle>
+                <p className="text-sm text-gray-500 font-normal">Health check and budget utilization</p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-xl">Project Performance</CardTitle>
-              <p className="text-sm text-gray-500 font-normal">Health check and budget utilization</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50/50">
+                    <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Project Name</th>
+                    <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Progress</th>
+                    <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Health</th>
+                    <th className="px-8 py-5 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {analyticsLoading ? (
+                    <tr><td colSpan={4} className="px-8 py-12 text-center text-gray-400">Analyzing projects...</td></tr>
+                  ) : reportData?.projects?.map((project: any) => {
+                    const budgetUtilization = project.budget > 0 ? (project.billedAmount / project.budget) * 100 : 0
+                    const isHealthy = project.progress >= budgetUtilization
+                    
+                    return (
+                      <tr key={project._id} className="hover:bg-gray-50/30 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-900 group-hover:text-violet-600 transition-colors">{project.name}</span>
+                            <span className="text-xs text-gray-500 capitalize">{project.status}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex flex-col gap-2 min-w-[120px]">
+                            <div className="flex items-center justify-between text-[11px] font-bold">
+                              <span className="text-gray-400">{project.progress}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-violet-500 transition-all duration-1000" 
+                                style={{ width: `${project.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className={cn(
+                            "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold gap-1.5",
+                            isHealthy ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-orange-700"
+                          )}>
+                            {isHealthy ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                            {isHealthy ? 'HEALTHY' : 'AT RISK'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-violet-50 hover:text-violet-600 transition-all">
+                            <ChevronRight className="w-5 h-5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
-          <Button variant="outline" className="rounded-xl border-gray-200 h-10 px-4 text-sm font-bold gap-2">
-            <Filter className="w-4 h-4" />
-            Advanced Filters
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50/50">
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Project Name</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Progress</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Budget Utilization</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assigned</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Health</th>
-                  <th className="px-8 py-5 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {isLoading ? (
-                  <tr><td colSpan={6} className="px-8 py-12 text-center text-gray-400">Analyzing projects...</td></tr>
-                ) : reportData?.projects?.map((project: any) => {
-                  const budgetUtilization = project.budget > 0 ? (project.billedAmount / project.budget) * 100 : 0
-                  const isHealthy = project.progress >= budgetUtilization
-                  
-                  return (
-                    <tr key={project._id} className="hover:bg-gray-50/30 transition-colors group">
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-gray-900 group-hover:text-violet-600 transition-colors">{project.name}</span>
-                          <span className="text-xs text-gray-500 capitalize">{project.status}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col gap-2 min-w-[120px]">
-                          <div className="flex items-center justify-between text-[11px] font-bold">
-                            <span className="text-gray-400">{project.progress}%</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-violet-500 transition-all duration-1000" 
-                              style={{ width: `${project.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-gray-900">${project.billedAmount.toLocaleString()}</span>
-                          <span className="text-xs text-gray-400">out of ${project.budget.toLocaleString()}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                            <Users className="w-4 h-4 text-gray-400" />
-                          </div>
-                          <span className="text-sm font-bold text-gray-700">{project.assignedCount}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className={cn(
-                          "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold gap-1.5",
-                          isHealthy ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-orange-700"
-                        )}>
-                          {isHealthy ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                          {isHealthy ? 'HEALTHY' : 'AT RISK'}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-violet-50 hover:text-violet-600 transition-all">
-                          <ChevronRight className="w-5 h-5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Recent Status Reports */}
+        <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+          <CardHeader className="p-8 border-b border-gray-50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <ClipboardList className="w-5 h-5 text-blue-600" />
+              </div>
+              <CardTitle className="text-xl">Recent Status Reports</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto custom-scrollbar">
+              {reportsLoading ? (
+                <div className="p-12 text-center text-gray-400">Loading reports...</div>
+              ) : recentStatusReports?.map((report) => (
+                <div key={report._id} className="p-6 hover:bg-gray-50/50 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider",
+                      report.status === 'on-track' ? "bg-emerald-50 text-emerald-600" :
+                      report.status === 'at-risk' ? "bg-amber-50 text-amber-600" :
+                      report.status === 'delayed' ? "bg-red-50 text-red-600" :
+                      "bg-blue-50 text-blue-600"
+                    )}>
+                      {report.status}
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">
+                      {new Date(report.reportDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-zinc-900 mb-1">{(report.projectId as any)?.name}</h4>
+                  <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed mb-3">
+                    {report.summary}
+                  </p>
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-50">
+                    <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center text-[8px] font-bold text-violet-600">
+                      {(report.submittedBy as any)?.firstName[0]}{(report.submittedBy as any)?.lastName[0]}
+                    </div>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tight">
+                      By {(report.submittedBy as any)?.firstName} {(report.submittedBy as any)?.lastName}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {recentStatusReports?.length === 0 && (
+                <div className="p-12 text-center">
+                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-6 h-6 text-gray-200" />
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No reports submitted yet</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -22,18 +22,25 @@ import { cn } from '@/lib/utils'
 
 import { AddEmployeeModal } from '@/components/dashboard/add-employee-modal'
 import { AdminPasswordResetModal } from '@/components/dashboard/admin-password-reset-modal'
+import { Pagination } from '@/components/ui/pagination-common'
 
 export default function EmployeesPage() {
-  const { employees, isLoading, deleteEmployee } = useEmployees()
+  const [currentPage, setCurrentPage] = useState(0)
+  const itemsPerPage = 10
   const [searchQuery, setSearchQuery] = useState('')
+  const { employees, total, pageCount, isLoading, deleteEmployee, updateEmployee } = useEmployees(currentPage, itemsPerPage, searchQuery)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null)
   const [resetModalEmployee, setResetModalEmployee] = useState<any | null>(null)
 
-  const filteredEmployees = employees?.filter(emp => 
-    `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.department.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handlePageChange = (selected: number) => {
+    setCurrentPage(selected)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setCurrentPage(0) // Reset to first page on search
+  }
 
   if (isLoading) {
     return (
@@ -56,14 +63,24 @@ export default function EmployeesPage() {
             <Download className="w-4 h-4" />
             Export
           </Button>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white gap-2" onClick={() => setIsModalOpen(true)}>
+          <Button className="bg-violet-600 hover:bg-violet-700 text-white gap-2" onClick={() => {
+            setSelectedEmployee(null)
+            setIsModalOpen(true)
+          }}>
             <UserPlus className="w-4 h-4" />
             Add Employee
           </Button>
         </div>
       </div>
 
-      <AddEmployeeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddEmployeeModal 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedEmployee(null)
+        }} 
+        employee={selectedEmployee}
+      />
       
       <AdminPasswordResetModal 
         isOpen={!!resetModalEmployee} 
@@ -79,7 +96,7 @@ export default function EmployeesPage() {
             placeholder="Search employees by name, email or department..." 
             className="pl-10 h-11"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -104,12 +121,20 @@ export default function EmployeesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredEmployees?.map((employee) => (
+              {employees?.map((employee) => (
                 <tr key={employee._id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold">
-                        {employee.firstName[0]}{employee.lastName[0]}
+                      <div className="w-10 h-10 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center font-bold overflow-hidden shadow-sm border border-white">
+                        {employee.profilePhoto ? (
+                          <img 
+                            src={`/api/files/${employee.profilePhoto}`} 
+                            alt={employee.firstName} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{employee.firstName[0]}{employee.lastName[0]}</span>
+                        )}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{employee.firstName} {employee.lastName}</p>
@@ -126,20 +151,22 @@ export default function EmployeesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={cn(
-                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
-                      employee.status === 'active' ? "bg-emerald-50 text-emerald-700" : 
-                      employee.status === 'on-leave' ? "bg-amber-50 text-amber-700" :
-                      "bg-gray-50 text-gray-700"
-                    )}>
-                      <span className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        employee.status === 'active' ? "bg-emerald-500" : 
-                        employee.status === 'on-leave' ? "bg-amber-500" :
-                        "bg-gray-400"
-                      )} />
-                      {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
-                    </span>
+                    <select
+                      className={cn(
+                        "text-[11px] font-bold uppercase px-3 py-1.5 rounded-lg border transition-all cursor-pointer outline-none",
+                        employee.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                        employee.status === 'on-leave' ? "bg-amber-50 text-amber-600 border-amber-100" :
+                        "bg-gray-50 text-gray-500 border-gray-200"
+                      )}
+                      value={employee.status}
+                      onChange={(e) => {
+                        updateEmployee({ id: employee._id, data: { status: e.target.value as any } })
+                      }}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="on-leave">On Leave</option>
+                    </select>
                   </td>
                    <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -152,7 +179,15 @@ export default function EmployeesPage() {
                       >
                         <KeyRound className="w-4 h-4" />
                       </Button>
-                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+                       <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-gray-400 hover:text-indigo-600"
+                        onClick={() => {
+                          setSelectedEmployee(employee)
+                          setIsModalOpen(true)
+                        }}
+                      >
                         <Edit2 className="w-4 h-4" />
                       </Button>
                       <Button 
@@ -171,7 +206,7 @@ export default function EmployeesPage() {
                   </td>
                 </tr>
               ))}
-              {filteredEmployees?.length === 0 && (
+              {(!employees || employees.length === 0) && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
@@ -188,7 +223,12 @@ export default function EmployeesPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      <Pagination 
+        pageCount={pageCount || 0}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+      />
     </div>
-  )
+  </div>
+)
 }

@@ -5,6 +5,7 @@ import { Leave } from '@/lib/db/models/Leave'
 import { Employee } from '@/lib/db/models/Employee'
 import { User } from '@/lib/db/models/User'
 import { getOrCreateBalance, checkQuota, updateLeaveUsage } from '@/lib/utils/leave-utils'
+import { sendNotification } from '@/lib/utils/notification-utils'
 
 export async function GET(req: Request) {
   try {
@@ -17,6 +18,9 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
+    const page = parseInt(searchParams.get('page') || '0')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = page * limit
     
     let query: any = {}
     
@@ -41,11 +45,16 @@ export async function GET(req: Request) {
       query.status = status
     }
 
+    const total = await Leave.countDocuments(query)
     const leaves = await Leave.find(query)
       .populate('employeeId', 'firstName lastName employeeId department')
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
 
-    return NextResponse.json(leaves)
+    const pageCount = Math.ceil(total / limit)
+
+    return NextResponse.json({ leaves, total, pageCount })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -90,6 +99,21 @@ export async function POST(req: Request) {
       employeeId: employee._id,
       status: initialStatus
     })
+
+    // Send Notification to HR/Admins
+    const admins = await User.find({ role: { $in: ['hr', 'super_admin'] } })
+    for (const admin of admins) {
+      if (admin._id.toString() !== session.user.id) {
+        await sendNotification({
+          recipient: admin._id,
+          sender: session.user.id,
+          type: 'leave',
+          title: 'New Leave Request',
+          message: `${employee.firstName} ${employee.lastName} has applied for ${data.type.replace('_', ' ')} leave.`,
+          link: '/time-tracking/leaves'
+        })
+      }
+    }
 
     return NextResponse.json(leave)
   } catch (error: any) {

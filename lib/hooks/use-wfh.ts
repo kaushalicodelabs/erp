@@ -5,13 +5,14 @@ import api from '@/lib/api/axios'
 import { WFH } from '@/types'
 import { toast } from 'sonner'
 
-export function useWFH(filters?: { status?: string }) {
+export function useWFH(page: number = 0, limit: number = 10, filters?: { status?: string }) {
   const queryClient = useQueryClient()
 
-  const { data: wfhRequests, isLoading, error } = useQuery<WFH[]>({
-    queryKey: ['wfh-requests', filters],
+  const { data, isLoading, error } = useQuery<{ wfhRequests: WFH[], total: number, pageCount: number }>({
+    queryKey: ['wfh-requests', page, limit, filters],
     queryFn: async () => {
-      const { data } = await api.get('/time-tracking/wfh', { params: filters })
+      const params = { page, limit, ...filters }
+      const { data } = await api.get('/time-tracking/wfh', { params })
       return data
     },
   })
@@ -59,7 +60,9 @@ export function useWFH(filters?: { status?: string }) {
   })
 
   return {
-    wfhRequests,
+    wfhRequests: data?.wfhRequests,
+    total: data?.total,
+    pageCount: data?.pageCount,
     isLoading,
     error,
     submitWFH: submitWFHMutation.mutate,

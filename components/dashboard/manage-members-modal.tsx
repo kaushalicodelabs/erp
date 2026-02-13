@@ -35,10 +35,20 @@ export function ManageMembersModal({
 
   useEffect(() => {
     if (project) {
-      const ids = project.assignedEmployees?.map(emp => 
+      const pmId = typeof project.projectManager === 'string' 
+        ? project.projectManager 
+        : project.projectManager?._id
+      
+      const employeeIds = project.assignedEmployees?.map(emp => 
         typeof emp === 'string' ? emp : emp._id
       ) || []
-      setSelectedIds(ids)
+      
+      // Combine PM ID with existing assigned employees, ensuring no duplicates
+      const initialIds = pmId 
+        ? Array.from(new Set([pmId, ...employeeIds]))
+        : employeeIds
+        
+      setSelectedIds(initialIds)
     }
   }, [project, isOpen])
 
@@ -69,17 +79,14 @@ export function ManageMembersModal({
     const matchesSearch = 
       emp.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.department.toLowerCase().includes(searchQuery.toLowerCase())
+      emp.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.position.toLowerCase().includes(searchQuery.toLowerCase())
     
-    const isActive = emp.status === 'active'
-    
-    // Role Restriction: 
-    // Only Super Admin can add HR and other Project Managers.
-    // Project Managers can only add non-PM and non-HR employees.
-    const forbiddenPositions = ['Project Manager', 'HR']
-    const canSeeRole = session?.user?.role === 'super_admin' || !forbiddenPositions.includes(emp.position)
+    // Allow seeing all active employees except HR for project assignment
+    const isNotHR = emp.position !== 'HR' && emp.position !== 'hr'
+    const canSeeRole = session?.user?.role === 'super_admin' || session?.user?.role === 'project_manager' || session?.user?.role === 'hr'
 
-    return isActive && matchesSearch && canSeeRole
+    return matchesSearch && canSeeRole && isNotHR
   })
 
   return (

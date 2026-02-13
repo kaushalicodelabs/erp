@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/auth.config'
 import connectDB from '@/lib/db/mongodb'
-import { Project } from '@/lib/db/models/Project'
-import { Employee } from '@/lib/db/models/Employee'
+import { Project, Employee } from '@/lib/db/models'
 
 export async function GET(
   req: Request,
@@ -11,13 +10,20 @@ export async function GET(
   try {
     const { id } = await params
     const session = await auth()
-    if (!session) {
+    if (!session || session.user?.role === 'hr') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     await connectDB()
-    const project = await Project.findById(id)
+    let queryBuilder = Project.findById(id)
+
+    if (session.user.role !== 'super_admin') {
+      queryBuilder = queryBuilder.select('-budget')
+    }
+
+    const project = await queryBuilder
       .populate('clientId', 'companyName')
+      .populate('projectManager', 'firstName lastName position')
       .populate('assignedEmployees', 'firstName lastName position')
     
     if (!project) {
@@ -38,7 +44,7 @@ export async function PUT(
   try {
     const { id } = await params
     const session = await auth()
-    if (!session || (session.user?.role !== 'super_admin' && session.user?.role !== 'project_manager')) {
+    if (!session || !['super_admin', 'project_manager'].includes(session.user?.role as string)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -61,7 +67,20 @@ export async function PUT(
     }
 
     const updatedProject = await Project.findByIdAndUpdate(id, body, { returnDocument: 'after' })
-    return NextResponse.json(updatedProject)
+      .populate('clientId', 'companyName')
+      .populate('projectManager', 'firstName lastName position')
+      .populate('assignedEmployees', 'firstName lastName position')
+    
+    if (!updatedProject) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    let responseData = updatedProject.toObject()
+    if (session.user.role !== 'super_admin') {
+      delete responseData.budget
+    }
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('Error updating project:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

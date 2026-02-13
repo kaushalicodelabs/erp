@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useProjects } from '@/lib/hooks/use-projects'
 import { useClients } from '@/lib/hooks/use-clients'
 import { 
@@ -15,7 +16,8 @@ import {
   MoreVertical,
   ChevronRight,
   TrendingUp,
-  User
+  User,
+  ClipboardList
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,19 +26,40 @@ import { cn } from '@/lib/utils'
 import { AddProjectModal } from '@/components/dashboard/add-project-modal'
 import { UpdateProjectStatusModal } from '@/components/dashboard/update-project-status-modal'
 import { ManageMembersModal } from '@/components/dashboard/manage-members-modal'
+import { CreateTaskModal } from '@/components/dashboard/create-task-modal'
+import { SubmitReportModal } from '@/components/dashboard/submit-report-modal'
 import { Project, Employee as EmployeeType } from '@/types'
 import { useSession } from 'next-auth/react'
 import { useEmployees } from '@/lib/hooks/use-employees'
+import { Pagination } from '@/components/ui/pagination-common'
 
 export default function ProjectsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ProjectsPageContent />
+    </Suspense>
+  )
+}
+
+function ProjectsPageContent() {
   const { data: session } = useSession()
-  const { projects, isLoading: projectsLoading } = useProjects()
-  const { employees } = useEmployees()
+  const [currentPage, setCurrentPage] = useState(0)
+  const itemsPerPage = 6
   const [searchQuery, setSearchQuery] = useState('')
+  const searchParams = useSearchParams()
+  const clientIdFilter = searchParams.get('clientId')
+  const { projects, total, pageCount, isLoading: projectsLoading } = useProjects(currentPage, itemsPerPage, searchQuery, clientIdFilter || undefined)
+  const { employees } = useEmployees()
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
   const [isManageModalOpen, setIsManageModalOpen] = useState(false)
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   const currentEmployee = employees?.find(e => e.userId === session?.user?.id)
@@ -59,10 +82,24 @@ export default function ProjectsPage() {
     setIsManageModalOpen(true)
   }
 
-  const filteredProjects = projects?.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.description.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleCreateTask = (project: Project) => {
+    setSelectedProject(project)
+    setIsTaskModalOpen(true)
+  }
+
+  const handleSubmitReport = (project: Project) => {
+    setSelectedProject(project)
+    setIsReportModalOpen(true)
+  }
+
+  const handlePageChange = (selected: number) => {
+    setCurrentPage(selected)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setCurrentPage(0)
+  }
 
   if (projectsLoading) {
     return (
@@ -121,6 +158,22 @@ export default function ProjectsPage() {
         }}
         project={selectedProject}
       />
+      <CreateTaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => {
+          setIsTaskModalOpen(false)
+          setSelectedProject(null)
+        }}
+        initialProjectId={selectedProject?._id}
+      />
+      <SubmitReportModal 
+        isOpen={isReportModalOpen}
+        onClose={() => {
+          setIsReportModalOpen(false)
+          setSelectedProject(null)
+        }}
+        project={selectedProject}
+      />
 
       {/* Search */}
       <div className="bg-white p-4 rounded-xl border border-gray-200">
@@ -130,7 +183,7 @@ export default function ProjectsPage() {
             placeholder="Search projects..." 
             className="pl-10 h-11"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
       </div>
@@ -138,7 +191,7 @@ export default function ProjectsPage() {
       {/* Content */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects?.map((project) => (
+          {projects?.map((project) => (
             <div key={project._id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-xl transition-all duration-300 flex flex-col group">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex flex-col gap-1">
@@ -229,6 +282,22 @@ export default function ProjectsPage() {
                     variant="ghost" 
                     size="sm" 
                     className="text-[10px] font-bold uppercase h-8 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => handleCreateTask(project)}
+                  >
+                    Assign
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-[10px] font-bold uppercase h-8 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50"
+                    onClick={() => handleSubmitReport(project)}
+                  >
+                    Report
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-[10px] font-bold uppercase h-8 rounded-lg text-gray-400 hover:text-violet-600 hover:bg-violet-50"
                     onClick={() => handleUpdateStatus(project)}
                   >
                     Update
@@ -254,7 +323,7 @@ export default function ProjectsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredProjects?.map((project) => (
+              {projects?.map((project) => (
                 <tr key={project._id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div>
@@ -306,14 +375,25 @@ export default function ProjectsPage() {
                       </button>
                       {(session?.user?.role === 'super_admin' || 
                         (session?.user?.role === 'project_manager' && isProjectManagerOf(project))) && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-1 h-7 w-7 text-gray-400 hover:text-violet-600"
-                          onClick={() => handleManageMembers(project)}
-                        >
-                          <Users className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 h-7 w-7 text-gray-400 hover:text-violet-600"
+                            title="Submit Status Report"
+                            onClick={() => handleSubmitReport(project)}
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 h-7 w-7 text-gray-400 hover:text-violet-600"
+                            onClick={() => handleManageMembers(project)}
+                          >
+                            <Users className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -324,7 +404,13 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {filteredProjects?.length === 0 && (
+        <Pagination 
+          pageCount={pageCount || 0}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+        />
+
+        {(!projects || projects.length === 0) && (
          <div className="py-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
           <FolderKanban className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-gray-900">No projects found</h3>

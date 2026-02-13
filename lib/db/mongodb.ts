@@ -1,4 +1,6 @@
-import mongoose from 'mongoose'
+import mongoose, { Connection } from 'mongoose'
+import '@/lib/db/models' // Ensure all models are registered
+import { GridFSBucket } from 'mongodb'
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/erp'
 
@@ -9,6 +11,7 @@ if (!MONGODB_URI) {
 interface MongooseCache {
   conn: typeof mongoose | null
   promise: Promise<typeof mongoose> | null
+  bucket: GridFSBucket | null
 }
 
 declare global {
@@ -16,7 +19,7 @@ declare global {
   var mongoose: MongooseCache | undefined
 }
 
-let cached: MongooseCache = global.mongoose || { conn: null, promise: null }
+let cached: MongooseCache = global.mongoose || { conn: null, promise: null, bucket: null }
 
 if (!global.mongoose) {
   global.mongoose = cached
@@ -35,6 +38,15 @@ async function connectDB(): Promise<typeof mongoose> {
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
       const sanitizedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@')
       console.log('✅ MongoDB connected successfully to:', sanitizedUri)
+      
+      // Initialize GridFS bucket
+      const db = mongoose.connection.db as any
+      if (db) {
+        cached.bucket = new GridFSBucket(db, {
+          bucketName: 'uploads'
+        })
+      }
+      
       return mongoose
     })
   }
@@ -47,6 +59,11 @@ async function connectDB(): Promise<typeof mongoose> {
   }
 
   return cached.conn
+}
+
+export const getGridFSBucket = async () => {
+  await connectDB()
+  return cached.bucket
 }
 
 export default connectDB

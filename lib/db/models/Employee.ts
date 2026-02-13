@@ -56,6 +56,19 @@ const EmployeeSchema = new Schema(
       phone: String,
       relationship: String,
     },
+    profilePhoto: {
+      type: String, // GridFS file ID
+    },
+    documents: [
+      {
+        name: String,
+        fileId: String, // GridFS file ID
+        uploadDate: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

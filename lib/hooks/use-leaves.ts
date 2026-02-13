@@ -5,13 +5,14 @@ import api from '@/lib/api/axios'
 import { Leave } from '@/types'
 import { toast } from 'sonner'
 
-export function useLeaves(filters?: { status?: string }) {
+export function useLeaves(page: number = 0, limit: number = 10, filters?: { status?: string }) {
   const queryClient = useQueryClient()
 
-  const { data: leaves, isLoading, error } = useQuery<Leave[]>({
-    queryKey: ['leaves', filters],
+  const { data, isLoading, error } = useQuery<{ leaves: Leave[], total: number, pageCount: number }>({
+    queryKey: ['leaves', page, limit, filters],
     queryFn: async () => {
-      const { data } = await api.get('/time-tracking/leaves', { params: filters })
+      const params = { page, limit, ...filters }
+      const { data } = await api.get('/time-tracking/leaves', { params })
       return data
     },
   })
@@ -59,7 +60,9 @@ export function useLeaves(filters?: { status?: string }) {
   })
 
   return {
-    leaves,
+    leaves: data?.leaves,
+    total: data?.total,
+    pageCount: data?.pageCount,
     isLoading,
     error,
     submitLeave: submitLeaveMutation.mutate,

@@ -60,8 +60,16 @@ export async function checkQuota(employeeId: string, type: string, date: Date) {
   const balance = await getOrCreateBalance(employeeId, date)
   
   if (type.includes('full')) {
+    // Rule: Either 1 full OR half leaves. If any half-day is used, cannot take a full day.
+    if (balance.halfDay.used > 0) {
+      return false
+    }
     return (balance.fullDay.used < (balance.fullDay.quota + balance.fullDay.carriedForward))
   } else if (type.includes('half')) {
+    // Rule: If full taken then cannot take half sick or casual paid.
+    if (balance.fullDay.used > 0) {
+      return false
+    }
     return (balance.halfDay.used < (balance.halfDay.quota + balance.halfDay.carriedForward))
   } else if (type === 'short') {
     return (balance.short.used < balance.short.quota)

@@ -5,14 +5,14 @@ import api from '@/lib/api/axios'
 import { Employee } from '@/types'
 import { toast } from 'sonner'
 
-export function useEmployees() {
+export function useEmployees(page: number = 0, limit: number = 10, search: string = '') {
   const queryClient = useQueryClient()
 
   // Fetch all employees
-  const { data: employees, isLoading, error } = useQuery<Employee[]>({
-    queryKey: ['employees'],
+  const { data, isLoading, error } = useQuery<{ employees: Employee[], total: number, pageCount: number }>({
+    queryKey: ['employees', page, limit, search],
     queryFn: async () => {
-      const { data } = await api.get('/employees')
+      const { data } = await api.get(`/employees?page=${page}&limit=${limit}&search=${search}`)
       return data
     },
   })
@@ -57,7 +57,9 @@ export function useEmployees() {
   })
 
   return {
-    employees,
+    employees: data?.employees,
+    total: data?.total,
+    pageCount: data?.pageCount,
     isLoading,
     error,
     createEmployee: createEmployeeMutation.mutate,

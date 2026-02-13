@@ -5,14 +5,15 @@ import api from '@/lib/api/axios'
 import { Project } from '@/types'
 import { toast } from 'sonner'
 
-export function useProjects() {
+export function useProjects(page: number = 0, limit: number = 6, search: string = '', clientId?: string) {
   const queryClient = useQueryClient()
 
   // Fetch all projects
-  const { data: projects, isLoading, error } = useQuery<Project[]>({
-    queryKey: ['projects'],
+  const { data, isLoading, error } = useQuery<{ projects: Project[], total: number, pageCount: number }>({
+    queryKey: ['projects', page, limit, search, clientId],
     queryFn: async () => {
-      const { data } = await api.get('/projects')
+      const url = `/projects?page=${page}&limit=${limit}&search=${search}${clientId ? `&clientId=${clientId}` : ''}`
+      const { data } = await api.get(url)
       return data
     },
   })
@@ -42,7 +43,9 @@ export function useProjects() {
   })
 
   return {
-    projects,
+    projects: data?.projects,
+    total: data?.total,
+    pageCount: data?.pageCount,
     isLoading,
     error,
     createProject: createProjectMutation.mutate,

@@ -5,14 +5,14 @@ import api from '@/lib/api/axios'
 import { Client } from '@/types'
 import { toast } from 'sonner'
 
-export function useClients() {
+export function useClients(page: number = 0, limit: number = 8, search: string = '') {
   const queryClient = useQueryClient()
 
   // Fetch all clients
-  const { data: clients, isLoading, error } = useQuery<Client[]>({
-    queryKey: ['clients'],
+  const { data, isLoading, error } = useQuery<{ clients: Client[], total: number, pageCount: number }>({
+    queryKey: ['clients', page, limit, search],
     queryFn: async () => {
-      const { data } = await api.get('/clients')
+      const { data } = await api.get(`/clients?page=${page}&limit=${limit}&search=${search}`)
       return data
     },
   })
@@ -30,7 +30,9 @@ export function useClients() {
   })
 
   return {
-    clients,
+    clients: data?.clients,
+    total: data?.total,
+    pageCount: data?.pageCount,
     isLoading,
     error,
     createClient: createClientMutation.mutate,

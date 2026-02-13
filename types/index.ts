@@ -29,6 +29,12 @@ export interface Employee {
   salary: number
   joiningDate: Date
   status: 'active' | 'inactive' | 'on-leave'
+  profilePhoto?: string
+  documents?: {
+    name: string
+    fileId: string
+    uploadDate: Date
+  }[]
   address?: string
   emergencyContact?: {
     name: string
@@ -54,6 +60,21 @@ export interface Project {
   progress: number
   createdAt: Date
   updatedAt: Date
+}
+
+export interface Task {
+  _id: string
+  title: string
+  description: string
+  projectId: string | Project
+  assigneeId: string | Employee
+  status: 'todo' | 'in-progress' | 'review' | 'completed'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  dueDate: Date
+  createdBy: string
+  createdAt: Date
+  updatedAt: Date
+  hasLog?: boolean
 }
 
 export interface Client {
@@ -203,4 +224,75 @@ export interface DashboardStats {
   employeesByDepartment: { department: string; count: number }[]
   projectsByStatus: { status: string; count: number }[]
   revenueByMonth: { month: string; revenue: number }[]
+}
+
+export interface TaskTimeLog {
+  _id: string
+  taskId: string
+  employeeId: string | Employee
+  hours: number
+  date: Date
+  description: string
+  createdAt: Date
+}
+
+export interface Meeting {
+  _id: string
+  title: string
+  description?: string
+  date: Date
+  participants: (string | Employee)[]
+  mom?: string
+  createdBy: string
+  status: 'scheduled' | 'completed' | 'cancelled'
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ProjectReport {
+  _id: string
+  projectId: string | Project
+  submittedBy: string | Employee
+  reportDate: Date
+  status: 'on-track' | 'at-risk' | 'delayed' | 'completed'
+  summary: string
+  achievements?: string
+  blockers?: string
+  nextSteps?: string
+  progress?: number
+  createdAt: Date
+  updatedAt: Date
+}
+export interface Interview {
+  _id: string
+  candidateName: string
+  candidateEmail: string
+  role: string
+  interviewer: string | Employee
+  startTime: Date
+  endTime: Date
+  location?: string
+  meetingLink?: string
+  status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'rejected' | 'under_review'
+  type: 'Technical' | 'HR' | 'Managerial' | 'Final'
+  round: number
+  notes?: string
+  resumeUrl?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface InterviewFeedback {
+  _id: string
+  interviewId: string | Interview
+  interviewerId: string | Employee
+  round: number
+  rating: number
+  technicalSkills?: string
+  softSkills?: string
+  culturalFit?: string
+  recommendation: 'Hire' | 'Strong Hire' | 'Reject' | 'Hold'
+  overallNotes?: string
+  createdAt: Date
+  updatedAt: Date
 }

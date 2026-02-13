@@ -22,15 +22,29 @@ import {
 } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { Pagination } from '@/components/ui/pagination-common'
 
 export default function LeavesPage() {
   const { data: session } = useSession()
+  const [currentPage, setCurrentPage] = useState(0)
+  const itemsPerPage = 10
   const [statusFilter, setStatusFilter] = useState('all')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   
-  const { leaves, isLoading, updateLeave, deleteLeave } = useLeaves(
+  const { leaves, total, pageCount, isLoading, updateLeave, deleteLeave } = useLeaves(
+    currentPage,
+    itemsPerPage,
     statusFilter !== 'all' ? { status: statusFilter } : undefined
   )
+
+  const handlePageChange = (selected: number) => {
+    setCurrentPage(selected)
+  }
+
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status)
+    setCurrentPage(0)
+  }
 
   const isAdmin = session?.user?.role === 'super_admin' || session?.user?.role === 'hr' || session?.user?.role === 'project_manager'
 
@@ -150,7 +164,7 @@ export default function LeavesPage() {
               {['all', 'pending', 'approved', 'rejected'].map((status) => (
                 <button
                   key={status}
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => handleStatusFilterChange(status)}
                   className={cn(
                     "px-3 py-1.5 text-xs font-semibold rounded-md transition-all",
                     statusFilter === status 
@@ -262,6 +276,12 @@ export default function LeavesPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Pagination 
+        pageCount={pageCount || 0}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   )
 }

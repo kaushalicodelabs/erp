@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useClients } from '@/lib/hooks/use-clients'
 import { 
   Building2, 
@@ -15,20 +16,25 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
-
 import { AddClientModal } from '@/components/dashboard/add-client-modal'
+import { Pagination } from '@/components/ui/pagination-common'
 
 export default function ClientsPage() {
-  const { clients, isLoading } = useClients()
+  const [currentPage, setCurrentPage] = useState(0)
+  const itemsPerPage = 8
   const [searchQuery, setSearchQuery] = useState('')
+  const { clients, total, pageCount, isLoading } = useClients(currentPage, itemsPerPage, searchQuery)
+  const router = useRouter()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const filteredClients = clients?.filter(client => 
-    client.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.contactPerson.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handlePageChange = (selected: number) => {
+    setCurrentPage(selected)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setCurrentPage(0) // Reset to first page on search
+  }
 
   if (isLoading) {
     return (
@@ -64,7 +70,7 @@ export default function ClientsPage() {
             placeholder="Search clients by company, contact or email..." 
             className="pl-10 h-11"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
         <Button variant="outline" className="h-11 gap-2">
@@ -75,7 +81,7 @@ export default function ClientsPage() {
 
       {/* Client Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredClients?.map((client) => (
+        {clients?.map((client) => (
           <div key={client._id} className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg hover:border-violet-200 transition-all duration-300 group">
             <div className="flex items-start justify-between mb-6">
               <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center border border-violet-100 group-hover:bg-violet-600 group-hover:text-white transition-colors duration-300 shadow-sm">
@@ -111,13 +117,17 @@ export default function ClientsPage() {
             </div>
 
             <div className="mt-6 pt-6 border-t border-gray-50">
-              <Button variant="outline" className="w-full text-xs font-bold uppercase tracking-wider h-10 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200">
+              <Button 
+                variant="outline" 
+                className="w-full text-xs font-bold uppercase tracking-wider h-10 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200"
+                onClick={() => router.push(`/projects?clientId=${client._id}`)}
+              >
                 View Projects
               </Button>
             </div>
           </div>
         ))}
-        {filteredClients?.length === 0 && (
+        {(!clients || clients.length === 0) && (
           <div className="col-span-full py-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <Building2 className="w-8 h-8 text-gray-300" />
@@ -130,6 +140,12 @@ export default function ClientsPage() {
           </div>
         )}
       </div>
+
+      <Pagination 
+        pageCount={pageCount || 0}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   )
 }

@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         _id: project._id,
         name: project.name,
         status: project.status,
-        budget: project.budget,
+        ...(session.user.role === 'super_admin' && { budget: project.budget }),
         progress: project.progress,
         billedAmount,
         startDate: project.startDate,
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
     }
 
     // 4. Global statistics
-    const totalBudget = reports.reduce((acc, p) => acc + p.budget, 0)
+    const totalBudget = session.user.role === 'super_admin' ? reports.reduce((acc, p) => acc + (p.budget || 0), 0) : undefined
     const totalBilled = reports.reduce((acc, p) => acc + p.billedAmount, 0)
     const statuses = {
       'planning': reports.filter(p => p.status === 'planning').length,
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       projects: reports,
       summary: {
-        totalBudget,
+        ...(session.user.role === 'super_admin' && { totalBudget }),
         totalBilled,
         projectCount: reports.length,
         averageProgress: reports.length > 0 ? reports.reduce((acc, p) => acc + p.progress, 0) / reports.length : 0,

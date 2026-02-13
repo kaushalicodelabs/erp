@@ -21,7 +21,8 @@ import {
   ClipboardList,
   Briefcase,
   Star,
-  History as HistoryIcon
+  History as HistoryIcon,
+  User
 } from 'lucide-react'
 import { useUIStore } from '@/lib/store/ui-store'
 import { cn } from '@/lib/utils'
@@ -31,12 +32,15 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
   { name: 'Employees', href: '/employees', icon: Users, roles: ['super_admin', 'hr'] },
   { name: 'Performance', href: '/employees/performance', icon: Star, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
-  { name: 'Projects', href: '/projects', icon: Briefcase, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
-  { name: 'Project Reports', href: '/projects/reports', icon: ClipboardList, roles: ['super_admin', 'hr', 'project_manager'] },
+  { name: 'Projects', href: '/projects', icon: Briefcase, roles: ['super_admin', 'project_manager', 'employee'] },
+  { name: 'Project Reports', href: '/projects/reports', icon: ClipboardList, roles: ['super_admin', 'project_manager'] },
+  { name: 'Tasks', href: '/projects/tasks', icon: HistoryIcon, roles: ['super_admin', 'project_manager', 'employee'] },
   { name: 'Clients', href: '/clients', icon: Building2, roles: ['super_admin', 'hr'] },
   { name: 'Time Tracking', href: '/time-tracking', icon: Clock, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
   { name: 'Leaves', href: '/time-tracking/leaves', icon: CalendarDays, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
   { name: 'Reports', href: '/time-tracking/reports', icon: BarChart3, roles: ['super_admin', 'hr', 'project_manager'] },
+  { name: 'Meetings', href: '/meetings', icon: CalendarDays, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
+  { name: 'Interviews', href: '/interviews', icon: Users, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
   { name: 'WFH', href: '/time-tracking/wfh', icon: Home, roles: ['super_admin', 'hr', 'project_manager', 'employee'] },
   { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['super_admin', 'hr'] },
   { name: 'Financial Reports', href: '/finance/reports', icon: BarChart3, roles: ['super_admin', 'hr'] },

@@ -5,12 +5,18 @@ import { Employee } from '@/lib/db/models/Employee'
 import { User } from '@/lib/db/models/User'
 import { mapPositionToRole } from '@/lib/utils/role-utils'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth()
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '0')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = page * limit
+    const search = searchParams.get('search') || ''
 
     await connectDB()
     
@@ -18,10 +24,27 @@ export async function GET() {
     const nonAdminUsers = await User.find({ role: { $ne: 'super_admin' } }, '_id')
     const nonAdminUserIds = nonAdminUsers.map(u => u._id)
 
-    // Only return employees linked to these non-admin users
-    const employees = await Employee.find({ userId: { $in: nonAdminUserIds } }).sort({ createdAt: -1 })
+    let query: any = { userId: { $in: nonAdminUserIds } }
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { department: { $regex: search, $options: 'i' } }
+      ]
+    }
+
+    const total = await Employee.countDocuments(query)
+    const employees = await Employee.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
     
-    return NextResponse.json(employees)
+    return NextResponse.json({
+      employees,
+      total,
+      pageCount: Math.ceil(total / limit)
+    })
   } catch (error) {
     console.error('Error fetching employees:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
