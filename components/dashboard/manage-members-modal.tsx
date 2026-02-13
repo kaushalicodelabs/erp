@@ -35,7 +35,10 @@ export function ManageMembersModal({
 
   useEffect(() => {
     if (project) {
-      setSelectedIds(project.assignedEmployees || [])
+      const ids = project.assignedEmployees?.map(emp => 
+        typeof emp === 'string' ? emp : emp._id
+      ) || []
+      setSelectedIds(ids)
     }
   }, [project, isOpen])
 
