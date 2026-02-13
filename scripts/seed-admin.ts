@@ -1,3 +1,7 @@
+import { loadEnvConfig } from '@next/env'
+const projectDir = process.cwd()
+loadEnvConfig(projectDir)
+
 import connectDB from '../lib/db/mongodb'
 import { User } from '../lib/db/models/User'
 import { Employee } from '../lib/db/models/Employee'

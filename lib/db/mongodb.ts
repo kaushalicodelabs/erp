@@ -33,7 +33,8 @@ async function connectDB(): Promise<typeof mongoose> {
     }
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('✅ MongoDB connected successfully')
+      const sanitizedUri = MONGODB_URI.replace(/:([^@]+)@/, ':****@')
+      console.log('✅ MongoDB connected successfully to:', sanitizedUri)
       return mongoose
     })
   }
