@@ -26,6 +26,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${inter.variable} font-sans antialiased bg-[#f5f6fa] text-gray-900`}
+        suppressHydrationWarning
       >
         <QueryProvider>
           {children}
