@@ -1,18 +1,22 @@
-'use client'
+  'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api/axios'
 import { Timesheet } from '@/types'
 import { toast } from 'sonner'
 
-export function useAttendance(month?: number, year?: number) {
+export function useAttendance(month?: number, year?: number, adminView: boolean = false) {
   const queryClient = useQueryClient()
 
   // Fetch attendance records
   const { data: attendance, isLoading, error } = useQuery<Timesheet[]>({
-    queryKey: ['attendance', month, year],
+    queryKey: ['attendance', month, year, adminView],
     queryFn: async () => {
-      const params = month !== undefined && year !== undefined ? { month, year } : {}
+      const params: any = {}
+      if (month !== undefined) params.month = month
+      if (year !== undefined) params.year = year
+      if (adminView) params.adminView = true
+      
       const { data } = await api.get('/attendance', { params })
       return data
     },

@@ -1,52 +1,86 @@
-'use client'
+  "use client";
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { useAttendance } from '@/lib/hooks/use-attendance'
-import { 
-  Clock, 
-  MapPin, 
-  History, 
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAttendance } from "@/lib/hooks/use-attendance";
+import { useSession } from "next-auth/react";
+import {
+  Clock,
+  MapPin,
+  History,
   Calendar as CalendarIcon,
   Play,
   Square,
   BadgeCheck,
-  AlertCircle
-} from 'lucide-react'
-import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
+  AlertCircle,
+} from "lucide-react";
+import { format, differenceInSeconds } from "date-fns";
+import { cn } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
 export default function TimeTrackingPage() {
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const { 
-    attendance, 
-    isLoading, 
-    clockIn, 
-    isClockingIn, 
-    clockOut, 
-    isClockingOut, 
-    todayRecord 
-  } = useAttendance()
+  const { data: session } = useSession();
+
+  // Redirect Super Admin to the admin view
+  if (session?.user?.role === "super_admin") {
+    redirect("/time-tracking/admin");
+  }
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const {
+    attendance,
+    isLoading,
+    clockIn,
+    isClockingIn,
+    clockOut,
+    isClockingOut,
+    todayRecord,
+  } = useAttendance();
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const isClockedIn = !!todayRecord && !todayRecord.checkOut
+  const isClockedIn = !!todayRecord && !todayRecord.checkOut;
+  const isSuperAdmin = session?.user?.role === "super_admin";
+
+  // Calculate elapsed time for dynamic timer
+  const elapsedTime = useMemo(() => {
+    if (!isClockedIn || !todayRecord?.checkIn || isSuperAdmin) return null;
+
+    const seconds = differenceInSeconds(
+      currentTime,
+      new Date(todayRecord.checkIn),
+    );
+    if (seconds < 0) return "00:00:00";
+
+    const h = Math.floor(seconds / 3600)
+      .toString()
+      .padStart(2, "0");
+    const m = Math.floor((seconds % 3600) / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+
+    return `${h}:${m}:${s}`;
+  }, [currentTime, todayRecord?.checkIn, isClockedIn, isSuperAdmin]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Time Tracking</h1>
-          <p className="text-gray-500 mt-1">Manage your daily attendance and work hours.</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Time Tracking
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Manage your daily attendance and work hours.
+          </p>
         </div>
         <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
           <CalendarIcon className="w-5 h-5 text-violet-500" />
           <span className="text-sm font-semibold text-gray-700">
-            {format(new Date(), 'EEEE, MMMM do, yyyy')}
+            {format(new Date(), "EEEE, MMMM do, yyyy")}
           </span>
         </div>
       </div>
@@ -58,25 +92,30 @@ export default function TimeTrackingPage() {
             <Clock className="w-32 h-32" />
           </div>
           <CardHeader className="relative z-10 border-white/10">
-            <CardTitle className="text-white/80 text-sm font-medium uppercase tracking-widest">Ongoing Session</CardTitle>
+            <CardTitle className="text-white/80 text-sm font-medium uppercase tracking-widest">
+              {isClockedIn ? "Active Session" : "Start Session"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10 space-y-8 py-6">
             <div className="text-center">
               <div className="text-5xl font-bold tracking-tighter mb-2">
-                {format(currentTime, 'hh:mm:ss')}
-                <span className="text-2xl ml-1 opacity-70">{format(currentTime, 'aa')}</span>
+                {elapsedTime ? elapsedTime : "00:00:00"}
               </div>
-              <p className="text-violet-100/60 text-sm">Real-time Clock</p>
+              <p className="text-violet-100/60 text-sm">
+                {elapsedTime ? "Session Duration" : "No Active Session"}
+              </p>
             </div>
 
             <div className="space-y-4">
               {!isClockedIn ? (
-                <Button 
+                <Button
                   onClick={() => clockIn()}
                   disabled={isClockingIn}
                   className="w-full h-14 bg-white text-violet-600 hover:bg-violet-50 font-bold rounded-2xl shadow-lg transition-all active:scale-95 text-lg"
                 >
-                  {isClockingIn ? 'Processing...' : (
+                  {isClockingIn ? (
+                    "Processing..."
+                  ) : (
                     <>
                       <Play className="w-5 h-5 mr-3 fill-current" />
                       Clock In Now
@@ -84,12 +123,14 @@ export default function TimeTrackingPage() {
                   )}
                 </Button>
               ) : (
-                <Button 
+                <Button
                   onClick={() => clockOut(todayRecord._id)}
                   disabled={isClockingOut}
                   className="w-full h-14 bg-red-400/20 hover:bg-red-400/30 border border-red-200/50 text-white font-bold rounded-2xl transition-all active:scale-95 text-lg backdrop-blur-md"
                 >
-                  {isClockingOut ? 'Processing...' : (
+                  {isClockingOut ? (
+                    "Processing..."
+                  ) : (
                     <>
                       <Square className="w-5 h-5 mr-3 fill-current" />
                       Clock Out
@@ -97,15 +138,23 @@ export default function TimeTrackingPage() {
                   )}
                 </Button>
               )}
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/5 text-center">
                   <p className="text-xs text-violet-100/60 mb-1">Check In</p>
-                  <p className="font-semibold">{todayRecord?.checkIn ? format(new Date(todayRecord.checkIn), 'hh:mm aa') : '--:--'}</p>
+                  <p className="font-semibold">
+                    {todayRecord?.checkIn
+                      ? format(new Date(todayRecord.checkIn), "hh:mm aa")
+                      : "--:--"}
+                  </p>
                 </div>
                 <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/5 text-center">
                   <p className="text-xs text-violet-100/60 mb-1">Worked</p>
-                  <p className="font-semibold">{todayRecord?.hoursWorked ? `${todayRecord.hoursWorked}h` : '0h'}</p>
+                  <p className="font-semibold">
+                    {todayRecord?.hoursWorked
+                      ? `${todayRecord.hoursWorked}h`
+                      : "0h"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -121,40 +170,63 @@ export default function TimeTrackingPage() {
               </div>
               <div>
                 <CardTitle>Attendance History</CardTitle>
-                <p className="text-sm text-gray-500 font-normal">Your recent activities</p>
+                <p className="text-sm text-gray-500 font-normal">
+                  Your recent activities
+                </p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-12 text-center text-gray-400">Loading records...</div>
+              <div className="p-12 text-center text-gray-400">
+                Loading records...
+              </div>
             ) : attendance?.length === 0 ? (
-              <div className="p-12 text-center text-gray-400">No attendance records found.</div>
+              <div className="p-12 text-center text-gray-400">
+                No attendance records found.
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50/50">
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Check In</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Check Out</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Worked Hours</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Check In
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Check Out
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Worked Hours
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {attendance?.map((record) => (
-                      <tr key={record._id} className="hover:bg-gray-50/50 transition-colors group">
+                      <tr
+                        key={record._id}
+                        className="hover:bg-gray-50/50 transition-colors group"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-medium text-gray-900">
-                            {format(new Date(record.date), 'MMM dd, yyyy')}
+                            {format(new Date(record.date), "MMM dd, yyyy")}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {record.checkIn ? format(new Date(record.checkIn), 'hh:mm aa') : '-'}
+                          {record.checkIn
+                            ? format(new Date(record.checkIn), "hh:mm aa")
+                            : "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {record.checkOut ? format(new Date(record.checkOut), 'hh:mm aa') : (
+                          {record.checkOut ? (
+                            format(new Date(record.checkOut), "hh:mm aa")
+                          ) : (
                             <span className="flex items-center gap-1.5 text-amber-600 font-medium">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
                               Active
@@ -162,13 +234,19 @@ export default function TimeTrackingPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">
-                          {record.hoursWorked ? `${record.hoursWorked} hrs` : '-'}
+                          {record.hoursWorked
+                            ? `${record.hoursWorked} hrs`
+                            : "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={cn(
-                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                            record.status === 'present' ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
-                          )}>
+                          <span
+                            className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                              record.status === "present"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-red-50 text-red-700",
+                            )}
+                          >
                             {record.status.toUpperCase()}
                           </span>
                         </td>
@@ -213,5 +291,5 @@ export default function TimeTrackingPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
