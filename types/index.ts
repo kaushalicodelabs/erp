@@ -1,298 +1,324 @@
 export interface User {
-  _id: string
-  email: string
-  password: string
-  name: string
-  role: 
-    | 'super_admin' 
-    | 'hr' 
-    | 'project_manager' 
-    | 'graphic_designer' 
-    | 'associate_software_developer' 
-    | 'software_developer' 
-    | 'senior_software_developer'
-  avatar?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  email: string;
+  password: string;
+  name: string;
+  role:
+    | "super_admin"
+    | "hr"
+    | "project_manager"
+    | "graphic_designer"
+    | "associate_software_developer"
+    | "software_developer"
+    | "senior_software_developer";
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Employee {
-  _id: string
-  userId: string
-  employeeId: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  department: string
-  position: string
-  salary: number
-  joiningDate: Date
-  status: 'active' | 'inactive' | 'on-leave'
-  profilePhoto?: string
+  _id: string;
+  userId: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  department: string;
+  position: string;
+  salary: number;
+  joiningDate: Date;
+  status: "active" | "inactive" | "on-leave";
+  profilePhoto?: string;
   documents?: {
-    name: string
-    fileId: string
-    uploadDate: Date
-  }[]
-  address?: string
+    name: string;
+    fileId: string;
+    uploadDate: Date;
+  }[];
+  address?: string;
   emergencyContact?: {
-    name: string
-    phone: string
-    relationship: string
-  }
-  createdAt: Date
-  updatedAt: Date
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Project {
-  _id: string
-  name: string
-  description: string
-  clientId: string | Client
-  status: 'planning' | 'in-progress' | 'on-hold' | 'completed' | 'cancelled'
-  priority: 'low' | 'medium' | 'high'
-  startDate: Date
-  endDate: Date
-  budget: number
-  projectManager: string | Employee
-  assignedEmployees: (string | Employee)[]
-  progress: number
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  name: string;
+  description: string;
+  clientId: string | Client;
+  status: "planning" | "in-progress" | "on-hold" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high";
+  startDate: Date;
+  endDate: Date;
+  budget: number;
+  projectManager: string | Employee;
+  assignedEmployees: (string | Employee)[];
+  progress: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Task {
-  _id: string
-  title: string
-  description: string
-  projectId: string | Project
-  assigneeId: string | Employee
-  status: 'todo' | 'in-progress' | 'review' | 'completed'
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  dueDate: Date
-  createdBy: string
-  createdAt: Date
-  updatedAt: Date
-  hasLog?: boolean
+  _id: string;
+  title: string;
+  description: string;
+  projectId: string | Project;
+  assigneeId: string | Employee;
+  status: "todo" | "in-progress" | "review" | "completed";
+  priority: "low" | "medium" | "high" | "urgent";
+  dueDate: Date;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  hasLog?: boolean;
 }
 
 export interface Client {
-  _id: string
-  companyName: string
-  contactPerson: string
-  email: string
-  phone: string
-  address?: string
-  website?: string
-  industry?: string
-  notes?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address?: string;
+  website?: string;
+  industry?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Timesheet {
-  _id: string
-  employeeId: string
-  date: Date
-  checkIn?: Date
-  checkOut?: Date
-  hoursWorked: number
-  projectId?: string
-  status: 'present' | 'absent' | 'leave' | 'half-day'
-  leaveType?: 'sick' | 'casual' | 'vacation'
-  notes?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  employeeId: string;
+  employee?: Employee; // populated by admin aggregation ($lookup as 'employee')
+  date: Date;
+  checkIn?: Date;
+  checkOut?: Date;
+  hoursWorked: number;
+  projectId?: string;
+  status: "present" | "absent" | "leave" | "half-day";
+  leaveType?: "sick" | "casual" | "vacation";
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Invoice {
-  _id: string
-  invoiceNumber: string
-  clientId: string
-  projectId?: string
-  issueDate: Date
-  dueDate: Date
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+  _id: string;
+  invoiceNumber: string;
+  clientId: string;
+  projectId?: string;
+  issueDate: Date;
+  dueDate: Date;
+  status: "draft" | "sent" | "paid" | "overdue" | "cancelled";
   items: {
-    description: string
-    quantity: number
-    rate: number
-    amount: number
-  }[]
-  subtotal: number
-  tax: number
-  total: number
-  notes?: string
-  createdAt: Date
-  updatedAt: Date
+    description: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Expense {
-  _id: string
-  employeeId: string
-  category: string
-  amount: number
-  date: Date
-  description: string
-  status: 'pending' | 'approved' | 'rejected'
-  receipt?: string
-  approvedBy?: string
-  approvalDate?: Date
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  employeeId: string;
+  category: string;
+  amount: number;
+  date: Date;
+  description: string;
+  status: "pending" | "approved" | "rejected";
+  receipt?: string;
+  approvedBy?: string;
+  approvalDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Salary {
-  _id: string
-  employeeId: string
-  baseSalary: number
-  currency: string
-  paymentFrequency: 'monthly' | 'bi-weekly' | 'weekly'
+  _id: string;
+  employeeId: string;
+  baseSalary: number;
+  currency: string;
+  paymentFrequency: "monthly" | "bi-weekly" | "weekly";
   bonuses: {
-    amount: number
-    reason: string
-    date: Date
-  }[]
+    amount: number;
+    reason: string;
+    date: Date;
+  }[];
   deductions: {
-    amount: number
-    reason: string
-    date: Date
-  }[]
-  status: 'active' | 'inactive'
-  lastIncrementDate?: Date
+    amount: number;
+    reason: string;
+    date: Date;
+  }[];
+  status: "active" | "inactive";
+  lastIncrementDate?: Date;
   bankDetails?: {
-    accountNumber: string
-    bankName: string
-    ifscCode: string
-  }
-  createdAt: Date
-  updatedAt: Date
+    accountNumber: string;
+    bankName: string;
+    ifscCode: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Payroll {
-  _id: string
-  employeeId: string | Employee
-  month: number
-  year: number
-  baseSalary: number
-  bonuses: number
-  deductions: number
-  netPayable: number
-  status: 'pending' | 'paid' | 'failed'
-  paymentDate?: Date
-  transactionId?: string
-  notes?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  employeeId: string | Employee;
+  month: number;
+  year: number;
+  baseSalary: number;
+  bonuses: number;
+  deductions: number;
+  netPayable: number;
+  status: "pending" | "paid" | "failed";
+  paymentDate?: Date;
+  transactionId?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Leave {
-  _id: string
-  employeeId: string | Employee
-  type: 'sick_full' | 'casual_full' | 'sick_half' | 'casual_half' | 'short' | 'unpaid' | 'other'
-  startDate: Date
-  endDate: Date
-  reason: string
-  status: 'pending_hr' | 'pending_admin' | 'approved' | 'rejected_hr' | 'rejected_admin' | 'cancelled'
-  approvedBy?: string
-  approvalDate?: Date
-  notes?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  employeeId: string | Employee;
+  type:
+    | "sick_full"
+    | "casual_full"
+    | "sick_half"
+    | "casual_half"
+    | "short"
+    | "unpaid"
+    | "other";
+  startDate: Date;
+  endDate: Date;
+  reason: string;
+  status:
+    | "pending_hr"
+    | "pending_admin"
+    | "approved"
+    | "rejected_hr"
+    | "rejected_admin"
+    | "cancelled";
+  approvedBy?: string;
+  approvalDate?: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface WFH {
-  _id: string
-  employeeId: string | Employee
-  startDate: Date
-  endDate: Date
-  reason: string
-  status: 'pending_hr' | 'pending_admin' | 'approved' | 'rejected_hr' | 'rejected_admin' | 'cancelled'
-  approvedBy?: string
-  approvalDate?: Date
-  notes?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  employeeId: string | Employee;
+  startDate: Date;
+  endDate: Date;
+  reason: string;
+  status:
+    | "pending_hr"
+    | "pending_admin"
+    | "approved"
+    | "rejected_hr"
+    | "rejected_admin"
+    | "cancelled";
+  approvedBy?: string;
+  approvalDate?: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface DashboardStats {
-  totalEmployees: number
-  activeProjects: number
-  totalRevenue: number
-  pendingInvoices: number
-  employeesByDepartment: { department: string; count: number }[]
-  projectsByStatus: { status: string; count: number }[]
-  revenueByMonth: { month: string; revenue: number }[]
+  totalEmployees: number;
+  activeProjects: number;
+  totalRevenue: number;
+  pendingInvoices: number;
+  employeesByDepartment: { department: string; count: number }[];
+  projectsByStatus: { status: string; count: number }[];
+  revenueByMonth: { month: string; revenue: number }[];
 }
 
 export interface TaskTimeLog {
-  _id: string
-  taskId: string
-  employeeId: string | Employee
-  hours: number
-  date: Date
-  description: string
-  createdAt: Date
+  _id: string;
+  taskId: string;
+  employeeId: string | Employee;
+  hours: number;
+  date: Date;
+  description: string;
+  createdAt: Date;
 }
 
 export interface Meeting {
-  _id: string
-  title: string
-  description?: string
-  date: Date
-  participants: (string | Employee)[]
-  mom?: string
-  createdBy: string
-  status: 'scheduled' | 'completed' | 'cancelled'
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  title: string;
+  description?: string;
+  date: Date;
+  participants: (string | Employee)[];
+  mom?: string;
+  createdBy: string;
+  status: "scheduled" | "completed" | "cancelled";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ProjectReport {
-  _id: string
-  projectId: string | Project
-  submittedBy: string | Employee
-  reportDate: Date
-  status: 'on-track' | 'at-risk' | 'delayed' | 'completed'
-  summary: string
-  achievements?: string
-  blockers?: string
-  nextSteps?: string
-  progress?: number
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  projectId: string | Project;
+  submittedBy: string | Employee;
+  reportDate: Date;
+  status: "on-track" | "at-risk" | "delayed" | "completed";
+  summary: string;
+  achievements?: string;
+  blockers?: string;
+  nextSteps?: string;
+  progress?: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 export interface Interview {
-  _id: string
-  candidateName: string
-  candidateEmail: string
-  role: string
-  interviewer: string | Employee
-  startTime: Date
-  endTime: Date
-  location?: string
-  meetingLink?: string
-  status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled' | 'rejected' | 'under_review'
-  type: 'Technical' | 'HR' | 'Managerial' | 'Final'
-  round: number
-  notes?: string
-  resumeUrl?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  candidateName: string;
+  candidateEmail: string;
+  role: string;
+  interviewer: string | Employee;
+  startTime: Date;
+  endTime: Date;
+  location?: string;
+  meetingLink?: string;
+  status:
+    | "scheduled"
+    | "completed"
+    | "cancelled"
+    | "rescheduled"
+    | "rejected"
+    | "under_review";
+  type: "Technical" | "HR" | "Managerial" | "Final";
+  round: number;
+  notes?: string;
+  resumeUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface InterviewFeedback {
-  _id: string
-  interviewId: string | Interview
-  interviewerId: string | Employee
-  round: number
-  rating: number
-  technicalSkills?: string
-  softSkills?: string
-  culturalFit?: string
-  recommendation: 'Hire' | 'Strong Hire' | 'Reject' | 'Hold'
-  overallNotes?: string
-  createdAt: Date
-  updatedAt: Date
+  _id: string;
+  interviewId: string | Interview;
+  interviewerId: string | Employee;
+  round: number;
+  rating: number;
+  technicalSkills?: string;
+  softSkills?: string;
+  culturalFit?: string;
+  recommendation: "Hire" | "Strong Hire" | "Reject" | "Hold";
+  overallNotes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
